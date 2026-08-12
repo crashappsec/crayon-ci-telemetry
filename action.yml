@@ -1,0 +1,60 @@
+name: Crash Override CI Telemetry
+description: Start Wax CI telemetry for one GitHub Actions job.
+inputs:
+  gatekeeper-base:
+    description: Base URL for Gatekeeper token exchange.
+    required: false
+    default: https://api.gatekeeper.crashoverride.run
+  token-exchange-path:
+    description: Gatekeeper path that accepts the GitHub Actions OIDC exchange contract.
+    required: false
+    default: /v1/token/exchange
+  oidc-audience:
+    description: Audience requested from GitHub Actions OIDC. Defaults to gatekeeper-base.
+    required: false
+    default: ""
+  requested-ttl-seconds:
+    description: Requested Wax ingest credential TTL, capped by Gatekeeper.
+    required: false
+    default: "900"
+  runtime-url:
+    description: Optional override for the Linux CI runtime archive URL.
+    required: false
+    default: ""
+  runtime-sha256:
+    description: Optional override for the Linux CI runtime archive SHA-256.
+    required: false
+    default: ""
+  runtime-signature-url:
+    description: Optional override for the Linux CI runtime archive signature URL.
+    required: false
+    default: ""
+  runtime-signing-identity:
+    description: Expected signing identity for cosign verification.
+    required: false
+    default: ""
+  service-binary:
+    description: Runtime-relative path to the Wax CI service executable.
+    required: false
+    default: bin/wax-ci-service
+  sensor-binary:
+    description: Runtime-relative path to the Linux CI sensor stub executable.
+    required: false
+    default: bin/linux-ci-sensor-stub
+  startup-timeout-ms:
+    description: Time to wait for local service and sensor startup.
+    required: false
+    default: "10000"
+  allow-unsigned-runtime:
+    description: Development-only switch for fake local runtime bundles.
+    required: false
+    default: "false"
+  dry-run:
+    description: Exchange credentials and verify metadata without starting Wax binaries.
+    required: false
+    default: "false"
+runs:
+  using: node20
+  main: dist/main.mjs
+  post: dist/post.mjs
+  post-if: always()
