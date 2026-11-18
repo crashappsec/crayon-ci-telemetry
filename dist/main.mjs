@@ -5,11 +5,12 @@ import {
   getBooleanInput,
   getInput,
   getIntegerInput,
+  inputEnvName,
   maskSecret,
   saveState,
   setFailed
 } from "./lib/action-env.mjs";
-import { exchangeGithubActionsToken, requestOidcToken } from "./lib/exchange.mjs";
+import { exchangeApiKey, exchangeGithubActionsToken, requestOidcToken } from "./lib/exchange.mjs";
 import {
   assertExecutable,
   buildPaths,
@@ -27,21 +28,16 @@ import {
 async function main() {
   const env = process.env;
   const inputs = readInputs(env);
+  // Masked before anything else can print, and dropped from the environment
+  // so neither the Wax CI service, the sudo'd sensor nor tar/cosign inherit it.
+  maskSecret(inputs.apiKey);
+  delete env[inputEnvName("api-key")];
   const sessionId = createSessionId();
   const paths = buildPaths(env, sessionId);
   await mkdir(paths.root, { recursive: true });
   saveActionState(env, sessionId, paths);
 
-  const audience = inputs.oidcAudience || inputs.gatekeeperBase;
-  const oidcToken = await requestOidcToken({ env, audience });
-  maskSecret(oidcToken);
-
-  const credential = await exchangeGithubActionsToken({
-    gatekeeperBase: inputs.gatekeeperBase,
-    tokenExchangePath: inputs.tokenExchangePath,
-    oidcToken,
-    requestedTtlSeconds: inputs.requestedTtlSeconds
-  });
+  const credential = await exchangeCredential(env, inputs);
   maskSecret(credential.access_token);
   await writeCredential(paths.credentialPath, credential);
 
@@ -59,6 +55,7 @@ async function main() {
   if (inputs.dryRun) {
     addSummary(env, summary([
       "Crash Override telemetry dry run completed.",
+      `Gatekeeper exchange: ${exchangeMode(inputs)}`,
       `CI session: ${sessionId}`,
       `Runtime verification: ${signatureMode}`
     ]));
@@ -101,10 +98,32 @@ async function main() {
 
   addSummary(env, summary([
     "Crash Override telemetry started.",
+    `Gatekeeper exchange: ${exchangeMode(inputs)}`,
     `CI session: ${sessionId}`,
     `Wax CI service pid: ${servicePid}`,
     `Linux CI sensor sudo pid: ${sensorSudoPid}`
   ]));
+}
+
+async function exchangeCredential(env, inputs) {
+  if (inputs.apiKey) {
+    return await exchangeApiKey({
+      gatekeeperBase: inputs.gatekeeperBase,
+      tokenExchangePath: inputs.tokenExchangePath,
+      apiKey: inputs.apiKey,
+      audience: inputs.apiKeyAudience,
+      scope: inputs.apiKeyScope
+    });
+  }
+  const audience = inputs.oidcAudience || inputs.gatekeeperBase;
+  const oidcToken = await requestOidcToken({ env, audience });
+  maskSecret(oidcToken);
+  return await exchangeGithubActionsToken({
+    gatekeeperBase: inputs.gatekeeperBase,
+    tokenExchangePath: inputs.tokenExchangePath,
+    oidcToken,
+    requestedTtlSeconds: inputs.requestedTtlSeconds
+  });
 }
 
 function readInputs(env) {
@@ -113,6 +132,9 @@ function readInputs(env) {
       defaultValue: "https://api.gatekeeper.crashoverride.run"
     }),
     tokenExchangePath: getInput(env, "token-exchange-path", { defaultValue: "/v1/token/exchange" }),
+    apiKey: getInput(env, "api-key"),
+    apiKeyAudience: getInput(env, "api-key-audience"),
+    apiKeyScope: getInput(env, "api-key-scope"),
     oidcAudience: getInput(env, "oidc-audience"),
     requestedTtlSeconds: getIntegerInput(env, "requested-ttl-seconds", 900),
     runtimeUrl: getInput(env, "runtime-url"),
@@ -137,6 +159,10 @@ function saveActionState(env, sessionId, paths) {
   saveState(env, "journal_path", paths.journalPath);
   saveState(env, "sensor_pid_file", paths.sensorPidFile);
   saveState(env, "backup_manifest_path", paths.backupManifestPath);
+}
+
+function exchangeMode(inputs) {
+  return inputs.apiKey ? "organization API key" : "GitHub Actions OIDC";
 }
 
 function summary(lines) {
