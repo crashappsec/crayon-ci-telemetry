@@ -6,9 +6,25 @@ inputs:
     required: false
     default: https://api.gatekeeper.crashoverride.run
   token-exchange-path:
-    description: Gatekeeper path that accepts the GitHub Actions OIDC exchange contract.
+    description: Gatekeeper token exchange path, for both the API-key and the GitHub Actions OIDC exchange.
     required: false
     default: /v1/token/exchange
+  api-key:
+    description: >-
+      Organization API key, passed from a secret (for example
+      secrets.CRASHOVERRIDE_API_KEY). When set, the action exchanges the key and
+      does not request a GitHub Actions OIDC token, so the job needs no
+      id-token permission. Never put the key itself in a workflow file.
+    required: false
+    default: ""
+  api-key-audience:
+    description: Optional audience sent with the API-key exchange. Omitted when empty.
+    required: false
+    default: ""
+  api-key-scope:
+    description: Optional scope sent with the API-key exchange. Omitted when empty.
+    required: false
+    default: ""
   oidc-audience:
     description: Audience requested from GitHub Actions OIDC. Defaults to gatekeeper-base.
     required: false

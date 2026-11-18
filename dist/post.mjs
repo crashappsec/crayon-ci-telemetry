@@ -12,6 +12,8 @@ import {
 
 async function post() {
   const env = process.env;
+  // The post step gets the inputs too; nothing it spawns needs the API key.
+  delete env.INPUT_API_KEY;
   const controlSocket = getState(env, "control_socket");
   const journalPath = getState(env, "journal_path");
   const manifestPath = getState(env, "backup_manifest_path");
