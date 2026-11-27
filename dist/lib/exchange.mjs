@@ -51,7 +51,7 @@ export async function exchangeGithubActionsToken({
   if (!response.ok) {
     const error = typeof body.error === "string" ? body.error : "unknown";
     const message = typeof body.message === "string" ? body.message : `Gatekeeper exchange failed with HTTP ${response.status}`;
-    throw new Error(`${error}: ${message}`);
+    throw new Error(oidcExchangeRefusal(response.status, error, message));
   }
   validateCiCredential(body);
   return body;
@@ -97,4 +97,16 @@ export function validateCiCredential(body) {
   if (body.linux_ci_runtime.sensor_mode !== "stub") {
     throw new Error("Gatekeeper response linux_ci_runtime.sensor_mode must be stub");
   }
+}
+
+// Gatekeeper has no GitHub Actions OIDC sign-in for CI telemetry. It answers
+// this exchange with "grant_type is required", which tells the author of a
+// workflow nothing they can act on. The error keeps Gatekeeper's words and
+// adds what was refused and what that means for the job.
+export function oidcExchangeRefusal(status, error, message) {
+  return (
+    `GitHub Actions OIDC exchange refused (HTTP ${status}) ${error}: ${message}. ` +
+    "GitHub Actions OIDC sign-in is not available for Crash Override CI telemetry, " +
+    "so this job sends no telemetry. See Status in the action's README."
+  );
 }
