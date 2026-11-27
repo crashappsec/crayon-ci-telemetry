@@ -6,6 +6,18 @@ runtime bundle, starts the Wax CI service as the runner user, starts the Linux
 CI sensor stub with `sudo --non-interactive`, and stops both processes from the
 post step.
 
+## Status
+
+Not released yet. This repository has no `v1` tag and no release, so a workflow
+must pin the full SHA of a commit on `main`
+(`git ls-remote https://github.com/crashappsec/crayon-ci-telemetry refs/heads/main`
+prints the newest one).
+
+The action cannot deliver telemetry yet. Gatekeeper has no GitHub Actions OIDC
+sign-in for CI telemetry, so the main step fails at the token exchange and says
+so. Sign-in with an organization API key is in progress in
+[#2](https://github.com/crashappsec/crayon-ci-telemetry/pull/2).
+
 ## Customer Workflow
 
 ```yaml
@@ -27,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: crashappsec/crayon-ci-telemetry@v1
+      - uses: crashappsec/crayon-ci-telemetry@<commit-sha>
         with:
           gatekeeper-base: https://api.gatekeeper.crashoverride.run
         env:
