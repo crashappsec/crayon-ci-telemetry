@@ -8,8 +8,8 @@ post step.
 
 ## Status
 
-Not released yet. This repository has no `v1` tag and no release, so a workflow
-must pin the full SHA of a commit on `main`
+`v1` is the first tagged version: `uses: crashappsec/crayon-ci-telemetry@v1`.
+For a stricter pin, use the full SHA of a commit on `main`
 (`git ls-remote https://github.com/crashappsec/crayon-ci-telemetry refs/heads/main`
 prints the newest one).
 
@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: crashappsec/crayon-ci-telemetry@<commit-sha>
+      - uses: crashappsec/crayon-ci-telemetry@v1
         with:
           gatekeeper-base: https://api.gatekeeper.crashoverride.run
         env:
